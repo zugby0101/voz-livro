@@ -18,8 +18,33 @@ jobs:
         with:
           name: Narra-${{ runner.os }}
           path: dist/*
+  mac-app:
+    # Narra.app completo (Apple Silicon + Intel), montado e testado num Mac real
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Montar Narra.app
+        run: ./build-mac-from-linux.sh dist-mac
+      - name: Testar o app (abre o servidor e responde)
+        run: |
+          xattr -cr dist-mac/Narra.app || true
+          dist-mac/Narra.app/Contents/MacOS/Narra --no-browser &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8765/api/voices >/dev/null && break; sleep 2; done
+          curl -sf http://127.0.0.1:8765/ | grep -q "<title>Narra"
+          curl -sf http://127.0.0.1:8765/api/voices | grep -q "pt-BR-FranciscaNeural"
+          printf 'Capítulo 1\n\nEste é um teste do Narra em português.' > teste.txt
+          curl -sf -F file=@teste.txt http://127.0.0.1:8765/api/extract | grep -q '"language":"pt"'
+          curl -sf -X POST http://127.0.0.1:8765/api/quit || true
+          echo "App do Mac testado com sucesso"
+          cat ~/Library/Logs/Narra.log || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Narra-macOS-app
+          path: dist-mac/Narra-macOS.zip
   release:
-    needs: build
+    needs: [build, mac-app]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -32,7 +57,7 @@ jobs:
           mkdir out
           cp art/Narra-Windows/Narra-Audiolivro.exe out/Narra-Audiolivro-Windows.exe
           cp art/Narra-Linux/Narra-Audiolivro out/Narra-Audiolivro-Linux
-          (cd art/Narra-macOS && zip -qry ../../out/Narra-Audiolivro-macOS.zip .)
+          cp art/Narra-macOS-app/Narra-macOS.zip out/Narra-macOS.zip
           # versões de celular foram retiradas do projeto por enquanto
           gh release delete iphone -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release delete desktop -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true

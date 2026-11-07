@@ -35,6 +35,7 @@ O navegador abre sozinho em `http://127.0.0.1:8765`. Os MP3 ficam na pasta `~/Au
 3. Para fechar, use o botão **Encerrar** na página. Erros ficam em `~/Library/Logs/Narra.log`.
 
 Para remontar o app (funciona em Linux ou Mac): `./build-mac-from-linux.sh`.
+O download pronto fica na página de Releases do GitHub (`Narra-macOS.zip`).
 Em um Mac, também dá para gerar com PyInstaller via `./build.sh`.
 
 ### Gerar o executável

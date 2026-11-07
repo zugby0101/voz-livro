@@ -23,5 +23,18 @@ cp app.py desktop.py extractor.py tts.py cli.py "$R/app/" && cp -r static "$R/ap
 cp mac/Narra "$APP/MacOS/Narra" && chmod +x "$APP/MacOS/Narra"
 cp mac/Info.plist "$APP/Info.plist" && cp mac/Narra.icns "$R/Narra.icns"
 printf 'APPL????' > "$APP/PkgInfo"
-(cd "$OUT" && zip -qry Narra-macOS.zip Narra.app)
+cat > "$OUT/LEIA-ME.txt" <<'TXT'
+NARRA AUDIOLIVROS PARA macOS (11 Big Sur ou mais novo; Apple Silicon M1/M2/M3/M4 e Intel)
+
+1. Arraste o Narra.app para a pasta Aplicativos.
+2. Como o app não tem assinatura da Apple, na primeira vez abra o Terminal e rode:
+     xattr -cr /Applications/Narra.app
+   (ou: tente abrir, depois vá em Ajustes do Sistema > Privacidade e Segurança > "Abrir Mesmo Assim")
+3. Abra o Narra. O navegador abre sozinho com o aplicativo.
+4. Para fechar, use o botão "Encerrar" no canto superior direito da página.
+
+Os MP3 são salvos na pasta Audiolivros, dentro da sua pasta de usuário.
+É preciso internet para gerar as vozes. Registro de erros: ~/Library/Logs/Narra.log
+TXT
+(cd "$OUT" && zip -qry Narra-macOS.zip Narra.app LEIA-ME.txt)
 echo "Pronto: $OUT/Narra-macOS.zip"
