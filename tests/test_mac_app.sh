@@ -8,11 +8,21 @@ LAUNCH=("$APP/Contents/MacOS/Narra" --no-browser)
 WORK=$(mktemp -d)
 
 cleanup() { curl -s -X POST $URL/api/quit >/dev/null 2>&1 || true; sleep 1; }
+fail() {
+  # anotação visível na API do GitHub (o log completo exige login)
+  msg=$(tail -c 900 ~/Library/Logs/Narra.log 2>/dev/null | tr '\n' ' ' | tr -d '\r')
+  echo "::error title=Narra ${WHAT} ${ARCH:-arm64} (linha $1)::${msg:-sem log}"
+}
+trap 'fail $LINENO' ERR
 trap cleanup EXIT
+rm -f ~/Library/Logs/Narra.log
 "${LAUNCH[@]}" &
 for i in $(seq 1 45); do curl -sf $URL/api/voices >/dev/null && break; sleep 2; done
-curl -sf $URL/api/voices >/dev/null || { echo "app não abriu"; tail -50 ~/Library/Logs/Narra.log; exit 1; }
-[ -n "$ARCH" ] && { ps -axo pid,arch,command | grep "[p]y-x86_64" || { echo "Python Intel não está rodando"; exit 1; }; }
+curl -sf $URL/api/voices >/dev/null || { echo "app não abriu"; tail -50 ~/Library/Logs/Narra.log || true; false; }
+if [ -n "$ARCH" ]; then
+  pid=$(pgrep -f "py-x86_64/bin/python3" | head -1) || { echo "::error title=Intel::Python Intel não está rodando"; exit 1; }
+  echo "Python Intel rodando (pid $pid)"
+fi
 
 case "$WHAT" in
 abrir)
