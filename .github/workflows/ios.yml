@@ -5,7 +5,7 @@ on:
     paths: ["ios/**", "web/**", "pwa/**", ".github/workflows/ios.yml"]
 jobs:
   ipa:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
