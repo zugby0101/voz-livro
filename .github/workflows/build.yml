@@ -26,19 +26,19 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Montar Narra.app
-        run: ./build-mac-from-linux.sh dist-mac
-      - name: Testar o app (abre o servidor e responde)
-        run: |
-          xattr -cr dist-mac/Narra.app || true
-          dist-mac/Narra.app/Contents/MacOS/Narra --no-browser &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8765/api/voices >/dev/null && break; sleep 2; done
-          curl -sf http://127.0.0.1:8765/ | grep -q "<title>Narra"
-          curl -sf http://127.0.0.1:8765/api/voices | grep -q "pt-BR-FranciscaNeural"
-          printf 'Capítulo 1\n\nEste é um teste do Narra em português.' > teste.txt
-          curl -sf -F file=@teste.txt http://127.0.0.1:8765/api/extract | grep -q '"language":"pt"'
-          curl -sf -X POST http://127.0.0.1:8765/api/quit || true
-          echo "App do Mac testado com sucesso"
-          cat ~/Library/Logs/Narra.log || true
+        run: ./build-mac-from-linux.sh dist-mac && xattr -cr dist-mac/Narra.app || true
+      - name: "Teste Apple Silicon: abrir o app"
+        run: tests/test_mac_app.sh dist-mac/Narra.app abrir
+      - name: "Teste Apple Silicon: ler DOCX, DOC e PDF"
+        run: tests/test_mac_app.sh dist-mac/Narra.app ler
+      - name: "Teste Apple Silicon: gerar MP3 com voz neural"
+        run: tests/test_mac_app.sh dist-mac/Narra.app mp3
+      - name: "Instalar Rosetta (para testar a versão Intel)"
+        run: /usr/bin/pgrep -q oahd || sudo softwareupdate --install-rosetta --agree-to-license
+      - name: "Teste Intel (Rosetta): abrir o app"
+        run: tests/test_mac_app.sh dist-mac/Narra.app abrir x86_64
+      - name: "Teste Intel (Rosetta): gerar MP3 com voz neural"
+        run: tests/test_mac_app.sh dist-mac/Narra.app mp3 x86_64
       - uses: actions/upload-artifact@v4
         with:
           name: Narra-macOS-app
