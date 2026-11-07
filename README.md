@@ -37,25 +37,6 @@ O navegador abre sozinho em `http://127.0.0.1:8765`. Os MP3 ficam na pasta `~/Au
 Para remontar o app (funciona em Linux ou Mac): `./build-mac-from-linux.sh`.
 Em um Mac, também dá para gerar com PyInstaller via `./build.sh`.
 
-### Android (Narra.apk — Android 5.0 ou mais novo)
-1. Copie `Narra.apk` para o celular e toque nele. Autorize "instalar apps desconhecidos" quando pedido.
-2. A narração usa o motor de voz do Android (Google Text-to-Speech, com vozes neurais).
-   Se faltar a voz de um idioma, toque em "Instalar vozes" no app.
-3. Abra documentos pelo botão do app ou pelo "Abrir com" do gerenciador de arquivos.
-4. "Salvar audiolivro (M4A)" grava o livro inteiro em um arquivo de áudio.
-5. A narração continua com a tela apagada ou com o app em segundo plano.
-
-Para recompilar: `android/build-apk.sh` (Ubuntu/Debian; requisitos no início do script).
-A chave de assinatura fica em `android/narra-release.jks` (senha padrão `narra123`):
-guarde-a, porque atualizações do app precisam ser assinadas com a mesma chave.
-
-### iPhone / iPad
-- **PWA (sem instalar nada):** publique a pasta `pwa/dist` numa hospedagem HTTPS (GitHub Pages,
-  Netlify, Vercel), abra no Safari e toque em Compartilhar › Adicionar à Tela de Início.
-  Funciona offline e usa as vozes Aprimoradas/Premium do iOS. Para regerar: `python3 pwa/build_pwa.py`.
-- **App nativo (`ios/`):** narra com a tela bloqueada e grava M4A. Compile no Mac com Xcode ou pelo
-  workflow `.github/workflows/ios.yml` e instale com Sideloadly/AltStore. Veja `ios/LEIA-ME.md`.
-
 ### Gerar o executável
 - Windows: dê dois cliques em `build.bat` → `dist\Narra-Audiolivro.exe`
 - Linux/macOS: `./build.sh` → `dist/Narra-Audiolivro`
@@ -86,8 +67,5 @@ tts.py          vozes neurais, divisão do texto e geração do MP3
 cli.py          linha de comando
 static/         interface do aplicativo
 web/index.html  versão web independente
-pwa/            app web instalável (PWA) para iPhone e Android
-ios/            app nativo para iPhone/iPad (Swift)
-android/        app Android (Java + interface web embutida)
 mac/            lançador, Info.plist e ícone do Narra.app
 ```

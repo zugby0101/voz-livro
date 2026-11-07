@@ -33,6 +33,8 @@ jobs:
           cp art/Narra-Windows/Narra-Audiolivro.exe out/Narra-Audiolivro-Windows.exe
           cp art/Narra-Linux/Narra-Audiolivro out/Narra-Audiolivro-Linux
           (cd art/Narra-macOS && zip -qry ../../out/Narra-Audiolivro-macOS.zip .)
+          # versões de celular foram retiradas do projeto por enquanto
+          gh release delete iphone -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release delete desktop -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release create desktop out/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "Narra para Windows, macOS e Linux" \

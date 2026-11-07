@@ -101,11 +101,6 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .times{display:flex;justify-content:space-between;font:400 11.5px var(--f-mono);opacity:.75;font-variant-numeric:tabular-nums}
 .deck .vsel{font:400 12px var(--f-mono);opacity:.8;text-align:right;max-width:200px}
 @media (max-width:640px){body .toast{bottom:calc(240px + env(safe-area-inset-bottom,0px))}.deck-in{grid-template-columns:minmax(0,1fr);gap:10px}.transport{justify-content:center}.deck .vsel{display:none}.wrap{padding-bottom:200px}}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a1205;font-weight:600;padding:12px}
-.btn.primary:disabled{opacity:.6}
-.pbar{position:relative;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
-.pbar i{position:absolute;inset:0 auto 0 0;background:var(--accent);width:0;transition:width .4s}
-.ptimes{display:flex;justify-content:space-between;align-items:center;font:400 12px var(--f-mono);color:var(--muted);margin-top:6px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;font-size:14px;z-index:9;max-width:min(520px,calc(100vw - 32px));box-shadow:0 6px 24px rgb(0 0 0 / .15)}
 .toast.err{border-left-color:var(--danger)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -157,13 +152,7 @@ input[type=range]{flex:1;accent-color:var(--accent)}
         <div class="chapters" id="chapters"></div>
       </section>
 
-      <section class="box" id="exportBox" hidden>
-        <p class="label">3 · Salvar áudio</p>
-        <button class="btn primary" id="exportBtn">Salvar audiolivro (M4A)</button>
-        <div id="expProg" hidden><div class="pbar"><i id="expFill"></i></div><div class="ptimes"><span id="expTxt">Preparando…</span><button class="btn link" id="expCancel">Cancelar</button></div></div>
-        <p class="hint">Grava o livro inteiro em um arquivo de áudio para ouvir em qualquer player, mesmo sem o app.</p>
-      </section>
-      <p class="hint" id="mp3Hint">Quer o áudio em <b>MP3</b> para ouvir offline? Use a versão executável do Narra, que grava o livro inteiro com vozes neurais.</p>
+      <p class="hint">Quer o áudio em <b>MP3</b> para ouvir offline? Use a versão executável do Narra, que grava o livro inteiro com vozes neurais.</p>
     </aside>
 
     <main class="page">
@@ -250,7 +239,6 @@ const store = {
   set(k,v){try{localStorage.setItem("narra:"+k,JSON.stringify(v))}catch{}}
 };
 const synth = window.speechSynthesis;
-const NATIVE = window.NarraTTS || null; // presente só dentro dos apps Android e iPhone
 const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
 const IOS_VOZES = "Ajustes › Acessibilidade › Conteúdo Falado › Vozes";
 const state = {title:"",text:"",lang:"pt",blocks:[],sents:[],idx:0,playing:false,gen:0,docKey:"",voices:[]};
@@ -391,8 +379,8 @@ function loadText(title,text,fromFile){
 
 /* ---------- vozes ---------- */
 const NEURAL=/natural|neural|online|google|premium|enhanced|siri|wavenet/i;
-const isNeural=v=>v.neural!=null?v.neural:NEURAL.test(v.name);
-const voiceLabel=v=>v.label||v.name.replace(/^Microsoft\s+/,"").replace(/\s*\(.*\)$/,"");
+const isNeural=v=>NEURAL.test(v.name);
+const voiceLabel=v=>v.name.replace(/^Microsoft\s+/,"").replace(/\s*\(.*\)$/,"");
 function loadVoices(){state.voices=synth?synth.getVoices():[];fillVoices()}
 function fillVoices(){
   const sel=$("voice"),vs=state.voices.filter(v=>v.lang.toLowerCase().replace("_","-").startsWith(state.lang));
@@ -401,16 +389,13 @@ function fillVoices(){
   sel.innerHTML=vs.map(v=>`<option value="${esc(v.voiceURI)}">${isNeural(v)?"★ ":""}${esc(voiceLabel(v))} · ${v.lang}</option>`).join("");
   if(vs.some(v=>v.voiceURI===saved))sel.value=saved;
   const hasNeural=vs.some(isNeural);
-  $("voiceHint").innerHTML=NATIVE?(!vs.length?'Nenhuma voz para este idioma. <button class="btn link" id="ttsSettings">Instalar vozes</button>'
-      :hasNeural?`<span class="badge">IA</span> Vozes com ★ são neurais (geradas por IA).`:'Dica: instale as vozes de alta qualidade do Google. <button class="btn link" id="ttsSettings">Abrir ajustes de voz</button>')
-    :!synth?"Este navegador não tem síntese de voz. Use Chrome, Edge ou Safari."
+  $("voiceHint").innerHTML=!synth?"Este navegador não tem síntese de voz. Use Chrome, Edge ou Safari."
     :IOS?(!vs.length?`Nenhuma voz para este idioma. Baixe uma em ${IOS_VOZES}.`
       :hasNeural?`<span class="badge">IA</span> Vozes com ★ são as vozes Aprimoradas/Premium do iOS.`
       :`Dica: baixe vozes <b>Aprimoradas</b> ou <b>Premium</b> (bem mais naturais) em ${IOS_VOZES}.`)
     :!vs.length?"Nenhuma voz para este idioma neste aparelho. Instale o idioma nas configurações de fala do sistema, ou use o Microsoft Edge."
     :hasNeural?`<span class="badge">IA</span> Vozes com ★ são neurais (geradas por IA).`
     :"Dica: no Microsoft Edge aparecem vozes neurais de IA (★) muito mais naturais.";
-  const ts=$("ttsSettings");if(ts)ts.onclick=()=>NATIVE.openSettings();
   $("deckVoice").textContent=sel.selectedOptions[0]?.textContent.replace("★ ","")||"";
 }
 function currentVoice(){return state.voices.find(v=>v.voiceURI===$("voice").value)}
@@ -497,76 +482,11 @@ async function handle(file){
   catch(err){$("docStats").textContent="Falha na leitura";toast(err.message||String(err),true)}
 }
 // iOS/Chrome: mantém a fala viva em abas longas
-setInterval(()=>{if(!NATIVE&&state.playing&&synth&&!synth.speaking&&!synth.pending)step()},4000);
-
-/* ---------- Android: motor de voz nativo (TextToSpeech) ---------- */
-function setupNative(){
-  document.documentElement.classList.add("android");
-  $("exportBox").hidden=false;$("mp3Hint").hidden=true;
-  const ios=NATIVE.platform==="ios";
-  document.querySelector(".mode").textContent=ios?"App iPhone · voz do sistema":"App Android · voz do sistema";
-  $("drop").querySelector("strong").textContent="Toque para escolher o arquivo";
-  $("drop").querySelector("span").textContent=ios?"ou compartilhe um PDF/DOCX com o Narra pelo app Arquivos":"ou abra um PDF/DOCX com o Narra pelo gerenciador de arquivos";
-  const BATCH=250,langTag=()=>({pt:"pt-BR",en:"en-US",es:"es-ES"}[state.lang]);
-  let qEnd=-1;
-  const vArgs=()=>{const v=currentVoice();return[v?v.name:"",langTag(),+$("rate").value,+$("pitch").value]};
-  function enqueue(from,flush){
-    const to=Math.min(state.sents.length,from+BATCH);
-    NATIVE.speakQueue(JSON.stringify(state.sents.slice(from,to).map(s=>s.t)),from,state.gen,...vArgs(),flush);
-    qEnd=to-1;
-  }
-  loadVoices=function(){try{state.voices=JSON.parse(NATIVE.getVoices()).map(v=>({...v,voiceURI:v.name}))}catch{state.voices=[]}fillVoices()};
-  window.__ttsReady=ok=>{if(!ok)toast("O motor de voz do Android não iniciou. Instale ou ative o Google Text-to-Speech.",true);loadVoices()};
-  window.__tts=(ev,g,i)=>{
-    if(g!==state.gen)return;
-    if(ev==="start"){state.idx=i;store.set("pos:"+state.docKey,i);mark();
-      if(i>=qEnd-25&&qEnd+1<state.sents.length)enqueue(qEnd+1,false)}
-    else if(ev==="done"&&i===state.sents.length-1){state.playing=false;state.idx=0;store.set("pos:"+state.docKey,0);ui();mark(true);toast("Fim do livro.")}
-    else if(ev==="error"){toast("A voz parou. Verifique o motor de voz do Android.",true);pause()}
-  };
-  play=function(){
-    if(!state.sents.length){toast("Carregue um documento primeiro.",true);return}
-    state.gen++;state.playing=true;ui();mark();enqueue(state.idx,true);
-  };
-  pause=function(){state.gen++;state.playing=false;NATIVE.stop();ui()};
-  speak=function(text){NATIVE.speakQueue(JSON.stringify([text]),0,-1,...vArgs(),true)};
-  $("testVoice").onclick=()=>{pause();speak({pt:"Olá! Esta é a voz que vai narrar o seu audiolivro.",en:"Hello! This is the voice that will narrate your audiobook.",es:"¡Hola! Esta es la voz que narrará tu audiolibro."}[state.lang])};
-  // salvar áudio
-  $("exportBtn").onclick=()=>{
-    if(!state.sents.length){toast("Carregue um documento primeiro.",true);return}
-    pause();const chunks=[];let cur="";
-    for(const s of state.sents){if(cur.length+s.t.length+1>3000&&cur){chunks.push(cur);cur=""}cur+=(cur?" ":"")+s.t}
-    if(cur)chunks.push(cur);
-    NATIVE.exportAudio(JSON.stringify(chunks),state.title||"audiolivro",...vArgs());
-  };
-  $("expCancel").onclick=()=>NATIVE.cancelExport();
-  window.__exp=(ev,a,b)=>{
-    const busy=ev==="progress"||ev==="encoding";
-    $("expProg").hidden=!busy;$("exportBtn").disabled=busy;
-    if(ev==="progress"){$("expFill").style.width=(a/b*90)+"%";$("expTxt").textContent=`Gravando trecho ${a} de ${b}`}
-    if(ev==="encoding"){$("expFill").style.width="95%";$("expTxt").textContent="Compactando o arquivo…"}
-    if(ev==="done")toast(`Áudio salvo: ${a}`);
-    if(ev==="error")toast("Não foi possível salvar o áudio: "+a,true);
-    if(ev==="cancel")toast("Gravação cancelada.");
-  };
-  // arquivos abertos pelo "Abrir com" do Android
-  window.__checkPending=()=>{
-    const raw=NATIVE.takePendingFile();if(!raw)return;
-    try{const f=JSON.parse(raw),bin=atob(f.b64),u=new Uint8Array(bin.length);
-      for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);
-      handle(new File([u],f.name))}catch(e){toast("Não foi possível abrir o arquivo recebido.",true)}
-  };
-  setTimeout(window.__checkPending,300);
-  loadVoices();
-}
+setInterval(()=>{if(state.playing&&synth&&!synth.speaking&&!synth.pending)step()},4000);
 
 /* ---------- início ---------- */
 $("rate").value=store.get("rate",1);$("pitch").value=store.get("pitch",1);
 $("rateOut").textContent=(+$("rate").value).toFixed(2)+"×";$("pitchOut").textContent=(+$("pitch").value).toFixed(2);
-if(matchMedia("(display-mode: standalone)").matches||navigator.standalone){
-  document.querySelector(".mode").textContent="App instalado · funciona offline";
-  $("drop").querySelector("strong").textContent="Toque para escolher o arquivo";}
-if(NATIVE)setupNative();
-else if(synth){loadVoices();synth.onvoiceschanged=loadVoices}
+if(synth){loadVoices();synth.onvoiceschanged=loadVoices}
 loadText(SAMPLES.pt.title,SAMPLES.pt.text,false);
 </script>
