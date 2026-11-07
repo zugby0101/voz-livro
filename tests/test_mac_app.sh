@@ -26,8 +26,10 @@ fi
 
 case "$WHAT" in
 abrir)
-  curl -sf $URL/ | grep -q "<title>Narra"
-  curl -sf $URL/api/voices | grep -q "pt-BR-FranciscaNeural"
+  page=$(curl -sf $URL/); voices=$(curl -sf $URL/api/voices)
+  grep -q "<title>Narra" <<<"$page"
+  grep -q "pt-BR-FranciscaNeural" <<<"$voices"
+  grep -q '"pf_dora"' <<<"$voices"
   ;;
 ler)
   printf 'Capítulo 1\n\nEra uma vez uma menina que morava perto do rio. Ela não tinha medo da água e todos os dias ia nadar com seus amigos.\n' > "$WORK/teste.txt"
@@ -36,9 +38,9 @@ ler)
   cupsfilter "$WORK/teste.txt" > "$WORK/teste.pdf" 2>/dev/null
   for f in docx doc pdf; do
     r=$(curl -sf -F file=@"$WORK/teste.$f" $URL/api/extract)
-    echo "$f: $(echo "$r" | head -c 120)"
-    echo "$r" | grep -q '"language":"pt"'
-    echo "$r" | grep -q 'menina que morava'
+    echo "$f: ${r:0:120}"
+    grep -q '"language":"pt"' <<<"$r"
+    grep -q 'menina que morava' <<<"$r"
   done
   ;;
 mp3|kokoro)
