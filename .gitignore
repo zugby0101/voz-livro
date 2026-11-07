@@ -1,0 +1,14 @@
+build/
+dist/
+__pycache__/
+*.mp3
+android/build/
+pwa/dist/
+ios/build/
+ios/Narra.xcodeproj/
+*.jks
+*.keystore
+android/Narra.apk
+dist-mac/
+*.zip
+*.idsig

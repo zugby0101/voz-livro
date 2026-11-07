@@ -1,0 +1,14 @@
+#!/bin/bash
+# Lançador do Narra: escolhe o Python certo para o processador (Apple Silicon ou Intel)
+DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+case "$(uname -m)" in
+  arm64) ARCH=aarch64 ;;
+  *)     ARCH=x86_64 ;;
+esac
+LOG="$HOME/Library/Logs/Narra.log"
+mkdir -p "$HOME/Library/Logs"
+export PYTHONPATH="$DIR/app:$DIR/site-$ARCH"
+export PYTHONDONTWRITEBYTECODE=1
+export SSL_CERT_FILE="$DIR/site-$ARCH/certifi/cacert.pem"
+cd "$DIR/app"
+exec "$DIR/py-$ARCH/bin/python3" -s "$DIR/app/desktop.py" "$@" >>"$LOG" 2>&1

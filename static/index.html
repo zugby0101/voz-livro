@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Narra Audiolivros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: estúdio de gravação — painel de controle à esquerda, página do livro à direita, transporte fixo embaixo como um gravador de fita */
+:root{
+  --paper:#eef1f4; --surface:#ffffff; --ink:#1a2333; --muted:#5b6678; --line:#d5dbe3;
+  --accent:#b9770e; --accent-soft:#f6e7cc; --tape:#25596b; --hl:#fbe6b8;
+  --danger:#a33a2c;
+  --f-display:"Newsreader",Georgia,"Times New Roman",serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--paper:#0f1520;--surface:#171f2d;--ink:#e6eaf1;--muted:#97a2b5;--line:#2a3547;
+  --accent:#e0a43c;--accent-soft:#3a2e17;--tape:#6bb3c8;--hl:#4a3a17;--danger:#e2735f;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;--paper:#0f1520;--surface:#171f2d;--ink:#e6eaf1;--muted:#97a2b5;--line:#2a3547;
+  --accent:#e0a43c;--accent-soft:#3a2e17;--tape:#6bb3c8;--hl:#4a3a17;--danger:#e2735f;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 140px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.reel{width:38px;height:38px;flex:none}
+h1{font:600 30px/1 var(--f-display);margin:0;letter-spacing:-.01em}
+.tag{color:var(--muted);font-size:13.5px;margin:4px 0 0}
+.mode{font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:7px 11px;background:var(--surface)}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{display:flex;flex-direction:column;gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.label{font:500 11px/1 var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:20px 14px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;background:var(--paper)}
+.drop:hover,.drop.over,.drop:focus-visible{border-color:var(--accent);background:var(--accent-soft);outline:none}
+.drop strong{display:block;font-weight:600}
+.drop span{color:var(--muted);font-size:13px}
+.fmts{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.fmt{font:500 11px/1 var(--f-mono);padding:4px 7px;border-radius:5px;background:var(--surface);border:1px solid var(--line)}
+.doc{display:flex;flex-direction:column;gap:4px}
+.doc b{font:600 18px/1.25 var(--f-display);word-break:break-word}
+.stats{font:400 12.5px/1.4 var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.samples{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.langs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.langs button{font:500 13px var(--f-body);padding:9px 4px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+select:focus-visible,textarea:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;align-items:center;gap:10px}
+.row label{font-size:13px;min-width:78px;color:var(--muted)}
+.row output{font:500 12px var(--f-mono);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.hint a{color:var(--tape)}
+.badge{font:500 10px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:4px;background:var(--accent-soft);color:var(--accent);vertical-align:middle}
+.btn{font:500 13.5px var(--f-body);padding:9px 13px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.link{border:none;background:none;padding:2px 4px;color:var(--tape);text-decoration:underline;text-underline-offset:3px}
+.chapters{display:flex;flex-direction:column;max-height:220px;overflow:auto;margin:0 -6px}
+.chapters button{all:unset;cursor:pointer;padding:6px;border-radius:6px;font-size:13.5px;display:flex;justify-content:space-between;gap:8px}
+.chapters button:hover,.chapters button:focus-visible{background:var(--paper)}
+.chapters button.on{color:var(--accent);font-weight:600}
+.chapters small{font:400 11.5px var(--f-mono);color:var(--muted)}
+/* página do livro */
+.page{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-height:60vh;display:flex;flex-direction:column}
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs{display:flex;gap:4px}
+.tabs button{all:unset;cursor:pointer;font-size:13px;padding:6px 10px;border-radius:6px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--paper);color:var(--ink);font-weight:500}
+.reader{position:relative;padding:26px clamp(18px,5vw,56px) 40px;max-height:68vh;overflow:auto;font:400 19px/1.65 var(--f-display);scroll-behavior:smooth}
+.reader p{margin:0 0 1em;max-width:66ch}
+.reader h2{font:600 24px/1.25 var(--f-display);margin:1.4em 0 .6em;text-wrap:balance}
+.reader h2:first-child{margin-top:0}
+.s{cursor:pointer;border-radius:3px;transition:background .2s}
+.s:hover{background:var(--paper)}
+.s.now{background:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+.s.read{color:var(--muted)}
+#editor{border:none;border-radius:0 0 var(--r) var(--r);min-height:60vh;padding:22px;font:15px/1.6 var(--f-mono);resize:vertical;background:var(--surface)}
+/* transporte */
+.deck{position:fixed;left:0;right:0;bottom:0;background:var(--ink);color:var(--paper);z-index:5;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.deck-in{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:18px;align-items:center}
+.transport{display:flex;gap:6px;align-items:center}
+.tb{width:38px;height:38px;border-radius:50%;border:1px solid color-mix(in srgb,var(--paper) 25%,transparent);background:none;color:inherit;cursor:pointer;display:grid;place-items:center}
+.tb:hover{border-color:var(--paper)}
+.tb.play{width:50px;height:50px;background:var(--accent);border-color:var(--accent);color:#1a1205}
+.tb svg{width:18px;height:18px;fill:currentColor}
+.track{display:flex;flex-direction:column;gap:6px;min-width:0}
+.now-line{font:400 15px/1.3 var(--f-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}
+.bar{position:relative;height:8px;border-radius:4px;background:color-mix(in srgb,var(--paper) 18%,transparent);cursor:pointer}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:4px;width:0}
+.bar b{position:absolute;top:-1px;width:2px;height:10px;background:color-mix(in srgb,var(--paper) 45%,transparent)}
+.times{display:flex;justify-content:space-between;font:400 11.5px var(--f-mono);opacity:.75;font-variant-numeric:tabular-nums}
+.deck .vsel{font:400 12px var(--f-mono);opacity:.8;text-align:right;max-width:200px}
+@media (max-width:640px){.toast{bottom:190px}.deck-in{grid-template-columns:minmax(0,1fr);gap:10px}.transport{justify-content:center}.deck .vsel{display:none}.wrap{padding-bottom:200px}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;font-size:14px;z-index:9;max-width:min(520px,calc(100vw - 32px));box-shadow:0 6px 24px rgb(0 0 0 / .15)}
+.toast.err{border-left-color:var(--danger)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a1205;font-weight:600;padding:12px}
+.btn.primary:disabled{opacity:.6;cursor:wait}
+.box .bar{position:relative;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.box .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);width:0;transition:width .4s}
+.box .times{display:flex;justify-content:space-between;font:400 12px var(--f-mono);color:var(--muted);margin-top:6px}
+#editor{flex:1}
+.results{border-top:1px solid var(--line);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+#list{display:flex;flex-direction:column;gap:10px}
+.result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center}
+.result .rname{grid-column:1/-1;font:500 14px var(--f-body);word-break:break-word}
+.result audio{width:100%}
+.wrap{padding-bottom:40px}
+a.btn{text-decoration:none}
+.hdr-r{display:flex;gap:10px;align-items:center}
+.bye{max-width:520px;margin:20vh auto;text-align:center;font:500 18px/1.5 var(--f-body)}
+.toast{bottom:24px}
+</style></head><body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="reel" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="4" fill="currentColor"/><circle cx="20" cy="9" r="3.4" fill="var(--accent)"/><circle cx="29.5" cy="25.5" r="3.4" fill="var(--accent)"/><circle cx="10.5" cy="25.5" r="3.4" fill="var(--accent)"/></svg>
+      <div><h1>Narra</h1><p class="tag">Transforme DOC, DOCX e PDF em audiolivro MP3 com vozes neurais de IA em português, inglês e espanhol.</p></div>
+    </div>
+    <div class="hdr-r"><span class="mode">Aplicativo · gera MP3</span><button class="btn" id="quit">Encerrar</button></div>
+  </header>
+  <div class="grid">
+    <aside class="panel">
+      <section class="box">
+        <p class="label">1 · Documento</p>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Escolher arquivo">
+          <strong>Arraste o arquivo aqui</strong><span>ou clique para escolher</span>
+          <div class="fmts"><span class="fmt">.docx</span><span class="fmt">.doc</span><span class="fmt">.pdf</span><span class="fmt">.txt</span></div>
+        </div>
+        <input type="file" id="file" accept=".doc,.docx,.pdf,.txt" hidden>
+        <div class="doc"><b id="docTitle">Nenhum arquivo</b><span class="stats" id="docStats">Escolha um documento para começar</span></div>
+      </section>
+      <section class="box">
+        <p class="label">2 · Voz neural</p>
+        <div class="langs" role="group" aria-label="Idioma">
+          <button data-lang="pt" aria-pressed="true">Português</button>
+          <button data-lang="en" aria-pressed="false">English</button>
+          <button data-lang="es" aria-pressed="false">Español</button>
+        </div>
+        <select id="voice" aria-label="Voz"></select>
+        <div class="row"><label for="rate">Velocidade</label><input type="range" id="rate" min="-50" max="100" step="5" value="0"><output id="rateOut">+0%</output></div>
+        <div class="row"><label for="pitch">Tom</label><input type="range" id="pitch" min="-30" max="30" step="2" value="0"><output id="pitchOut">+0Hz</output></div>
+        <button class="btn" id="previewBtn">Ouvir amostra da voz</button>
+        <audio id="previewAudio" hidden></audio>
+      </section>
+      <section class="box">
+        <p class="label">3 · Gerar</p>
+        <button class="btn primary" id="go">Gerar audiolivro MP3</button>
+        <div id="prog" hidden><div class="bar"><i id="fill"></i></div><div class="times"><span id="progTxt">Preparando…</span><span id="progPct">0%</span></div></div>
+        <p class="hint">Os arquivos ficam salvos na pasta <b>Audiolivros</b> do seu usuário. É preciso estar conectado à internet.</p>
+      </section>
+    </aside>
+    <main class="page">
+      <div class="page-head">
+        <div class="tabs"><button aria-selected="true">Texto do livro</button></div>
+        <span class="stats">Revise ou edite antes de gerar</span>
+      </div>
+      <textarea id="editor" spellcheck="false" aria-label="Texto do livro" placeholder="O texto extraído do documento aparece aqui. Você também pode colar um texto diretamente."></textarea>
+      <section class="results" id="results" hidden>
+        <p class="label">Audiolivros gerados</p>
+        <div id="list"></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const $=id=>document.getElementById(id);
+let VOICES={},DEF={},lang="pt",title="audiolivro";
+function toast(m,e){const t=$("toast");t.textContent=m;t.classList.toggle("err",!!e);t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,e?7000:3500)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function api(url,opt){const r=await fetch(url,opt);if(!r.ok){let m=r.statusText;try{m=(await r.json()).detail||m}catch{}throw new Error(m)}return r}
+function setLang(l){lang=l;document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===l));
+  $("voice").innerHTML=(VOICES[l]||[]).map(v=>`<option value="${v.id}">${esc(v.name)} · ${v.gender==="F"?"feminina":"masculina"} · ${v.locale}</option>`).join("");}
+function stats(){const w=$("editor").value.split(/\s+/).filter(Boolean).length,m=w/(150*(1+ +$("rate").value/100));
+  $("docStats").textContent=w?`${w.toLocaleString("pt-BR")} palavras · cerca de ${m<60?Math.max(1,Math.round(m))+" min":(m/60).toFixed(1).replace(".",",")+" h"} de áudio`:"Sem texto"}
+api("/api/voices").then(r=>r.json()).then(d=>{VOICES=d.voices;DEF=d.default;setLang(lang)});
+document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+for(const [id,u] of [["rate","%"],["pitch","Hz"]])$(id).oninput=()=>{const v=+$(id).value;$(id+"Out").textContent=(v>=0?"+":"")+v+u;stats()};
+$("editor").oninput=stats;
+const drop=$("drop"),fi=$("file");
+drop.onclick=()=>fi.click();drop.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click()}};
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("over")};drop.ondragleave=()=>drop.classList.remove("over");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("over");e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
+fi.onchange=()=>{fi.files[0]&&load(fi.files[0]);fi.value=""};
+async function load(f){
+  $("docTitle").textContent=f.name;$("docStats").textContent="Lendo arquivo…";
+  const fd=new FormData();fd.append("file",f);
+  try{const d=await(await api("/api/extract",{method:"POST",body:fd})).json();
+    title=d.title;$("editor").value=d.text;setLang(d.language);stats();
+    toast(`Idioma detectado: ${{pt:"português",en:"inglês",es:"espanhol"}[d.language]}.`)}
+  catch(e){$("docStats").textContent="Falha na leitura";toast(e.message,true)}
+}
+$("previewBtn").onclick=async()=>{
+  const b=$("previewBtn");b.disabled=true;b.textContent="Gerando amostra…";
+  const sample=$("editor").value.trim().slice(0,240)||{pt:"Olá! Esta é a voz que vai narrar o seu audiolivro.",en:"Hello! This is the voice that will narrate your audiobook.",es:"¡Hola! Esta es la voz que narrará tu audiolibro."}[lang];
+  const fd=new FormData();fd.append("voice",$("voice").value);fd.append("text",sample);fd.append("rate",$("rate").value);fd.append("pitch",$("pitch").value);
+  try{const blob=await(await api("/api/preview",{method:"POST",body:fd})).blob();const a=$("previewAudio");a.src=URL.createObjectURL(blob);a.play()}
+  catch(e){toast(e.message,true)}finally{b.disabled=false;b.textContent="Ouvir amostra da voz"}
+};
+$("go").onclick=async()=>{
+  const text=$("editor").value.trim();if(!text){toast("Carregue um documento ou cole um texto primeiro.",true);return}
+  const go=$("go");go.disabled=true;$("prog").hidden=false;$("fill").style.width="0";
+  try{
+    const {job}=await(await api("/api/convert",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text,voice:$("voice").value,title,rate:+$("rate").value,pitch:+$("pitch").value})})).json();
+    for(;;){
+      await new Promise(r=>setTimeout(r,800));
+      const s=await(await api(`/api/jobs/${job}`)).json(),pct=s.total?Math.round(s.done/s.total*100):0;
+      $("fill").style.width=pct+"%";$("progPct").textContent=pct+"%";$("progTxt").textContent=s.total?`Trecho ${s.done} de ${s.total}`:"Preparando…";
+      if(s.status==="error")throw new Error(s.error);
+      if(s.status==="done"){addResult(job,s.name);toast("Audiolivro pronto!");break}
+    }
+  }catch(e){toast("Não foi possível gerar: "+e.message,true)}
+  finally{go.disabled=false;setTimeout(()=>$("prog").hidden=true,1500)}
+};
+$("quit").onclick=async()=>{try{await fetch("/api/quit",{method:"POST"})}catch{}
+  document.body.innerHTML='<p class="bye">O Narra foi encerrado. Pode fechar esta aba.</p>'};
+function addResult(job,name){
+  $("results").hidden=false;const d=document.createElement("div");d.className="result";
+  d.innerHTML=`<div class="rname">${esc(name)}</div><audio controls preload="metadata" src="/api/jobs/${job}/audio"></audio><a class="btn" href="/api/jobs/${job}/audio?download=true">Baixar MP3</a>`;
+  $("list").prepend(d);
+}
+</script>
+</body></html>
