@@ -33,18 +33,53 @@ jobs:
         run: tests/test_mac_app.sh dist-mac/Narra.app ler
       - name: "Teste Apple Silicon: gerar MP3 com voz neural"
         run: tests/test_mac_app.sh dist-mac/Narra.app mp3
+      - name: "Teste Apple Silicon: narração Kokoro (IA local)"
+        run: tests/test_mac_app.sh dist-mac/Narra.app kokoro
       - name: "Instalar Rosetta (para testar a versão Intel)"
         run: /usr/bin/pgrep -q oahd || sudo softwareupdate --install-rosetta --agree-to-license
       - name: "Teste Intel (Rosetta): abrir o app"
         run: tests/test_mac_app.sh dist-mac/Narra.app abrir x86_64
       - name: "Teste Intel (Rosetta): gerar MP3 com voz neural"
         run: tests/test_mac_app.sh dist-mac/Narra.app mp3 x86_64
+      - name: "Teste Intel (Rosetta): narração Kokoro (IA local)"
+        run: tests/test_mac_app.sh dist-mac/Narra.app kokoro x86_64
       - uses: actions/upload-artifact@v4
         with:
           name: Narra-macOS-app
           path: dist-mac/Narra-macOS.zip
+  test-exe:
+    # testa o executável real em Windows 11 (ARM, x64 emulado), Windows Server 2025 e Linux
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-11-arm, art: Narra-Windows, exe: Narra-Audiolivro.exe, optional: true }
+          - { os: windows-latest, art: Narra-Windows, exe: Narra-Audiolivro.exe, optional: false }
+          - { os: ubuntu-latest, art: Narra-Linux, exe: Narra-Audiolivro, optional: false }
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.optional }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install python-docx fpdf2 mutagen
+      - uses: actions/download-artifact@v4
+        with: { name: "${{ matrix.art }}", path: app }
+      - run: chmod +x app/${{ matrix.exe }}
+        if: runner.os != 'Windows'
+      - name: "Teste: abrir o app"
+        run: python tests/test_exe.py app/${{ matrix.exe }} abrir
+      - name: "Teste: ler DOCX e PDF"
+        run: python tests/test_exe.py app/${{ matrix.exe }} ler
+      - name: "Teste: .doc sem LibreOffice mostra orientação"
+        run: python tests/test_exe.py app/${{ matrix.exe }} doc
+      - name: "Teste: narração Kokoro (IA local)"
+        run: python tests/test_exe.py app/${{ matrix.exe }} kokoro
+      - name: "Teste: voz Microsoft (online)"
+        run: python tests/test_exe.py app/${{ matrix.exe }} mp3
   release:
-    needs: [build, mac-app]
+    needs: [build, mac-app, test-exe]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

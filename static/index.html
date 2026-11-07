@@ -114,6 +114,11 @@ input[type=range]{flex:1;accent-color:var(--accent)}
 .result .rname{grid-column:1/-1;font:500 14px var(--f-body);word-break:break-word}
 .result audio{width:100%}
 .wrap{padding-bottom:40px}
+[hidden]{display:none!important}
+.kbox{background:var(--accent-soft);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.kbox p{margin:0}
+.kbox.ok{background:var(--paper);color:var(--muted)}
+.box .times{gap:8px}
 a.btn{text-decoration:none}
 .hdr-r{display:flex;gap:10px;align-items:center}
 .bye{max-width:520px;margin:20vh auto;text-align:center;font:500 18px/1.5 var(--f-body)}
@@ -139,15 +144,20 @@ a.btn{text-decoration:none}
         <div class="doc"><b id="docTitle">Nenhum arquivo</b><span class="stats" id="docStats">Escolha um documento para começar</span></div>
       </section>
       <section class="box">
-        <p class="label">2 · Voz neural</p>
+        <p class="label">2 · Voz de IA</p>
         <div class="langs" role="group" aria-label="Idioma">
           <button data-lang="pt" aria-pressed="true">Português</button>
           <button data-lang="en" aria-pressed="false">English</button>
           <button data-lang="es" aria-pressed="false">Español</button>
         </div>
         <select id="voice" aria-label="Voz"></select>
+        <div class="kbox" id="kbox" hidden>
+          <p id="kmsg">As vozes Kokoro rodam no seu computador e funcionam sem internet. Antes, baixe o modelo de voz uma única vez (350 MB).</p>
+          <button class="btn" id="kdl">Baixar vozes Kokoro</button>
+          <div id="kprog" hidden><div class="bar"><i id="kfill"></i></div><div class="times"><span id="ktxt"></span><span id="kpct"></span></div></div>
+        </div>
         <div class="row"><label for="rate">Velocidade</label><input type="range" id="rate" min="-50" max="100" step="5" value="0"><output id="rateOut">+0%</output></div>
-        <div class="row"><label for="pitch">Tom</label><input type="range" id="pitch" min="-30" max="30" step="2" value="0"><output id="pitchOut">+0Hz</output></div>
+        <div class="row" id="pitchRow"><label for="pitch">Tom</label><input type="range" id="pitch" min="-30" max="30" step="2" value="0"><output id="pitchOut">+0Hz</output></div>
         <button class="btn" id="previewBtn">Ouvir amostra da voz</button>
         <audio id="previewAudio" hidden></audio>
       </section>
@@ -155,7 +165,7 @@ a.btn{text-decoration:none}
         <p class="label">3 · Gerar</p>
         <button class="btn primary" id="go">Gerar audiolivro MP3</button>
         <div id="prog" hidden><div class="bar"><i id="fill"></i></div><div class="times"><span id="progTxt">Preparando…</span><span id="progPct">0%</span></div></div>
-        <p class="hint">Os arquivos ficam salvos na pasta <b>Audiolivros</b> do seu usuário. É preciso estar conectado à internet.</p>
+        <p class="hint">Os arquivos ficam salvos na pasta <b>Audiolivros</b> do seu usuário. Vozes Kokoro funcionam offline; vozes Microsoft precisam de internet.</p>
       </section>
     </aside>
     <main class="page">
@@ -174,15 +184,42 @@ a.btn{text-decoration:none}
 <div class="toast" id="toast" hidden></div>
 <script>
 const $=id=>document.getElementById(id);
-let VOICES={},DEF={},lang="pt",title="audiolivro";
+let VOICES={},DEF={},KOK={},lang="pt",title="audiolivro";
+const isKokoro=()=>((VOICES[lang]||[]).find(v=>v.id===$("voice").value)||{}).engine==="kokoro";
 function toast(m,e){const t=$("toast");t.textContent=m;t.classList.toggle("err",!!e);t.hidden=false;clearTimeout(t._h);t._h=setTimeout(()=>t.hidden=true,e?7000:3500)}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 async function api(url,opt){const r=await fetch(url,opt);if(!r.ok){let m=r.statusText;try{m=(await r.json()).detail||m}catch{}throw new Error(m)}return r}
 function setLang(l){lang=l;document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===l));
-  $("voice").innerHTML=(VOICES[l]||[]).map(v=>`<option value="${v.id}">${esc(v.name)} · ${v.gender==="F"?"feminina":"masculina"} · ${v.locale}</option>`).join("");}
+  const opt=v=>`<option value="${v.id}">${esc(v.name)} · ${v.gender==="F"?"feminina":"masculina"} · ${v.locale}</option>`;
+  const vs=VOICES[l]||[],k=vs.filter(v=>v.engine==="kokoro"),e=vs.filter(v=>v.engine!=="kokoro");
+  $("voice").innerHTML=(KOK.available&&k.length?`<optgroup label="Kokoro · IA no seu computador (offline)">${k.map(opt).join("")}</optgroup>`:"")
+    +`<optgroup label="Microsoft · online">${e.map(opt).join("")}</optgroup>`;
+  voiceChanged();}
+function voiceChanged(){
+  const k=isKokoro();
+  $("pitchRow").hidden=k; // o Kokoro não ajusta o tom
+  $("kbox").hidden=!k||KOK.installed;
+}
+async function refreshKokoro(){KOK=await(await api("/api/kokoro")).json();return KOK}
+$("voice").onchange=voiceChanged;
+$("kdl").onclick=async()=>{
+  $("kdl").disabled=true;$("kprog").hidden=false;
+  try{
+    await api("/api/kokoro/download",{method:"POST"});
+    for(;;){
+      await new Promise(r=>setTimeout(r,700));const k=await refreshKokoro();
+      const pct=Math.round(k.done/k.total*100);$("kfill").style.width=pct+"%";$("kpct").textContent=pct+"%";
+      $("ktxt").textContent=`${Math.round(k.done/1e6)} de ${k.size_mb} MB`;
+      if(k.installed){toast("Vozes Kokoro prontas. Agora funcionam sem internet.");break}
+      if(!k.downloading&&k.error)throw new Error(k.error);
+    }
+  }catch(e){toast("Não foi possível baixar: "+e.message,true)}
+  finally{$("kdl").disabled=false;$("kprog").hidden=true;voiceChanged()}
+};
 function stats(){const w=$("editor").value.split(/\s+/).filter(Boolean).length,m=w/(150*(1+ +$("rate").value/100));
   $("docStats").textContent=w?`${w.toLocaleString("pt-BR")} palavras · cerca de ${m<60?Math.max(1,Math.round(m))+" min":(m/60).toFixed(1).replace(".",",")+" h"} de áudio`:"Sem texto"}
-api("/api/voices").then(r=>r.json()).then(d=>{VOICES=d.voices;DEF=d.default;setLang(lang)});
+api("/api/voices").then(r=>r.json()).then(d=>{VOICES=d.voices;DEF=d.default;KOK=d.kokoro||{};setLang(lang);
+  if(KOK.available===false)toast("Vozes Kokoro indisponíveis neste computador; usando vozes Microsoft (online).",true)});
 document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
 for(const [id,u] of [["rate","%"],["pitch","Hz"]])$(id).oninput=()=>{const v=+$(id).value;$(id+"Out").textContent=(v>=0?"+":"")+v+u;stats()};
 $("editor").oninput=stats;
@@ -215,9 +252,10 @@ $("go").onclick=async()=>{
     for(;;){
       await new Promise(r=>setTimeout(r,800));
       const s=await(await api(`/api/jobs/${job}`)).json(),pct=s.total?Math.round(s.done/s.total*100):0;
-      $("fill").style.width=pct+"%";$("progPct").textContent=pct+"%";$("progTxt").textContent=s.total?`Trecho ${s.done} de ${s.total}`:"Preparando…";
+      $("fill").style.width=pct+"%";$("progPct").textContent=pct+"%";
+      $("progTxt").textContent=s.total?`Trecho ${s.done} de ${s.total}`:(s.message||"Preparando…");
       if(s.status==="error")throw new Error(s.error);
-      if(s.status==="done"){addResult(job,s.name);toast("Audiolivro pronto!");break}
+      if(s.status==="done"){addResult(job,s.name);toast("Audiolivro pronto!");if(isKokoro())refreshKokoro().then(voiceChanged);break}
     }
   }catch(e){toast("Não foi possível gerar: "+e.message,true)}
   finally{go.disabled=false;setTimeout(()=>$("prog").hidden=true,1500)}

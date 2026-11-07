@@ -23,7 +23,8 @@ def main():
         for lang, vs in VOICES.items():
             print(f"[{lang}]")
             for v in vs:
-                print(f"  {v['id']:36} {v['name']} ({v['gender']}, {v['locale']})")
+                motor = "Kokoro, offline" if v["engine"] == "kokoro" else "Microsoft, online"
+                print(f"  {v['id']:36} {v['name']} ({v['gender']}, {v['locale']}, {motor})")
         return
     if not a.arquivo:
         p.error("informe o arquivo")
@@ -40,7 +41,12 @@ def main():
         sys.stdout.write(f"\r[{bar:<30}] {d}/{t}")
         sys.stdout.flush()
 
-    asyncio.run(synthesize(text, out, voice, rate=a.velocidade, pitch=a.tom, progress=prog))
+    def status(msg):
+        sys.stdout.write(f"\r{msg:<90}")
+        sys.stdout.flush()
+
+    asyncio.run(synthesize(text, out, voice, rate=a.velocidade, pitch=a.tom, progress=prog,
+                           status=status))
     print(f"\nPronto: {out}")
 
 

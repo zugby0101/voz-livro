@@ -14,7 +14,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 from extractor import SUPPORTED, ExtractionError, detect_language, extract_text
-from tts import DEFAULT_VOICE, VOICES, estimate_minutes, synthesize
+import kokoro_engine
+from tts import DEFAULT_VOICE, VOICES, engine_of, estimate_minutes, synthesize
 
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 OUTPUT_DIR = Path.home() / "Audiolivros"
@@ -31,7 +32,30 @@ def index():
 
 @app.get("/api/voices")
 def voices():
-    return {"voices": VOICES, "default": DEFAULT_VOICE}
+    ok, why = kokoro_engine.availability()
+    return {"voices": VOICES, "default": DEFAULT_VOICE,
+            "kokoro": dict(kokoro_engine.download_state(), available=ok, reason=why)}
+
+
+@app.get("/api/kokoro")
+def kokoro_state():
+    ok, why = kokoro_engine.availability()
+    return dict(kokoro_engine.download_state(), available=ok, reason=why)
+
+
+@app.post("/api/kokoro/download")
+async def kokoro_download():
+    ok, why = kokoro_engine.availability()
+    if not ok:
+        raise HTTPException(400, why)
+    if not kokoro_engine.is_installed() and not kokoro_engine.download_state()["downloading"]:
+        async def run():
+            try:
+                await asyncio.to_thread(kokoro_engine.ensure_model)
+            except Exception:
+                pass  # o erro fica em download_state()["error"]
+        asyncio.get_running_loop().create_task(run())
+    return kokoro_engine.download_state()
 
 
 @app.post("/api/extract")
@@ -74,15 +98,18 @@ async def convert(req: ConvertRequest):
     safe = re.sub(r"[^\w\-. ]+", "", req.title).strip() or "audiolivro"
     out = OUTPUT_DIR / f"{safe} - {time.strftime('%Y%m%d-%H%M%S')}.mp3"
     job = JOBS[job_id] = {"status": "running", "done": 0, "total": 0, "file": str(out),
-                          "name": out.name, "error": None}
+                          "name": out.name, "error": None, "message": ""}
 
     def prog(d, t):
         job["done"], job["total"] = d, t
 
+    def status(msg):
+        job["message"] = msg
+
     async def run():
         try:
             await synthesize(req.text, out, req.voice, rate=req.rate, pitch=req.pitch,
-                             volume=req.volume, progress=prog)
+                             volume=req.volume, progress=prog, status=status)
             job["status"] = "done"
         except Exception as e:
             job["status"], job["error"] = "error", str(e)
@@ -120,6 +147,8 @@ async def quit_app():
 @app.post("/api/preview")
 async def preview(voice: str = Form(...), text: str = Form(...), rate: int = Form(0),
                   pitch: int = Form(0)):
+    if engine_of(voice) == "kokoro" and not kokoro_engine.is_installed():
+        raise HTTPException(409, "Baixe o modelo Kokoro primeiro (botão \"Baixar vozes Kokoro\").")
     out = Path(tempfile.gettempdir()) / f"preview-{uuid.uuid4().hex[:8]}.mp3"
     try:
         await synthesize(text[:300], out, voice, rate=rate, pitch=pitch)

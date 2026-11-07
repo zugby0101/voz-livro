@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Teste do Narra.app num Mac: tests/test_mac_app.sh <caminho/Narra.app> <abrir|ler|mp3> [x86_64]
+# Teste do Narra.app num Mac: tests/test_mac_app.sh <caminho/Narra.app> <abrir|ler|mp3|kokoro> [x86_64]
 set -euo pipefail
 APP="$1"; WHAT="$2"; ARCH="${3:-}"
 URL=http://127.0.0.1:8765
@@ -41,11 +41,12 @@ ler)
     echo "$r" | grep -q 'menina que morava'
   done
   ;;
-mp3)
+mp3|kokoro)
+  VOICE=pt-BR-FranciscaNeural; [ "$WHAT" = kokoro ] && VOICE=pf_dora
   job=$(curl -sf -H 'Content-Type: application/json' \
-    -d '{"text":"Olá! Este é um teste do Narra, o seu audiolivro com vozes de inteligência artificial.","voice":"pt-BR-FranciscaNeural","title":"teste-mac"}' \
+    -d '{"text":"Olá! Este é um teste do Narra, o seu audiolivro com vozes de inteligência artificial.","voice":"'"$VOICE"'","title":"teste-mac"}' \
     $URL/api/convert | python3 -c "import json,sys;print(json.load(sys.stdin)['job'])")
-  for i in $(seq 1 60); do
+  for i in $(seq 1 450); do
     st=$(curl -sf $URL/api/jobs/$job | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['status'],d.get('error') or '')")
     case "$st" in done*) break;; error*) echo "erro: $st"; exit 1;; esac
     sleep 2
@@ -53,7 +54,7 @@ mp3)
   curl -sf -o "$WORK/teste.mp3" "$URL/api/jobs/$job/audio"
   afinfo "$WORK/teste.mp3" | tee "$WORK/info.txt"
   dur=$(awk '/estimated duration/ {print $3}' "$WORK/info.txt")
-  python3 -c "import sys; d=float('$dur'); print('duração:', d, 's'); sys.exit(0 if d > 2 else 1)"
+  python3 -c "import sys; d=float('$dur'); print('$VOICE duração:', d, 's'); sys.exit(0 if d > 2 else 1)"
   ;;
 esac
 echo "OK: $WHAT ${ARCH:-arm64}"

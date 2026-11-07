@@ -3,12 +3,12 @@
 Transforma documentos **.doc, .docx e .pdf** em audiolivros narrados por vozes de IA em
 **português, inglês e espanhol**. Há duas versões:
 
-| | Versão web (`web/index.html`) | Aplicativo executável |
+| | Versão web (`web/index.html`) | Aplicativo para PC (Windows, macOS, Linux) |
 |---|---|---|
 | Instalação | Nenhuma: abra no navegador | Um arquivo executável |
-| Vozes | Vozes do navegador/sistema (no Microsoft Edge aparecem vozes neurais de IA, marcadas com ★) | 17 vozes neurais da Microsoft (Francisca, Antônio, Raquel, Aria, Guy, Elvira, Álvaro…) |
+| Vozes | Vozes do navegador/sistema | **Kokoro** (IA que roda no seu computador) + vozes neurais da Microsoft (online) |
 | Resultado | Ouve na hora, com texto destacado frase a frase | Gera um **arquivo MP3** do livro inteiro |
-| Funciona offline | Depois de carregada, sim (se o sistema tiver vozes locais) | Não, a síntese usa a internet |
+| Funciona offline | Depois de carregada, se o sistema tiver vozes locais | **Sim, com as vozes Kokoro** |
 
 ## Versão web
 Abra `web/index.html` em qualquer navegador moderno (Edge e Chrome recomendados).
@@ -20,6 +20,22 @@ Arraste o arquivo, escolha idioma e voz, e aperte play. Recursos:
 - atalho: barra de espaço para play/pausa.
 
 ## Aplicativo executável
+
+### Vozes Kokoro (padrão)
+O [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) é um modelo de voz de IA aberto (licença
+Apache 2.0) que roda no próprio computador, sem internet e sem custo. Vozes disponíveis:
+
+- **Português (Brasil):** Dora (feminina), Alex e Santa (masculinas)
+- **Inglês:** Heart, Bella, Nicole, Michael, Fenrir (EUA); Emma, George (Reino Unido)
+- **Espanhol:** Dora (feminina), Alex e Santa (masculinas)
+
+Na primeira vez, o app baixa o modelo de voz (~350 MB, uma única vez) para a pasta de dados
+do usuário (Windows: `%LOCALAPPDATA%\Narra\modelos`; macOS: `~/Library/Application Support/Narra/modelos`;
+Linux: `~/.local/share/narra/modelos`). Depois disso tudo funciona offline.
+No macOS, o Kokoro exige macOS 14+ (Apple Silicon) ou 13+ (Intel); em versões mais antigas o app
+usa as vozes Microsoft.
+
+As vozes da Microsoft (Francisca, Antônio, Aria, Elvira…) continuam disponíveis como opção online.
 
 ### Usar sem empacotar (precisa de Python 3.9+)
 - Windows: dê dois cliques em `iniciar.bat`
@@ -48,8 +64,8 @@ Executáveis do PyInstaller só rodam no sistema em que foram gerados: o `.exe` 
 
 ### Linha de comando
 ```bash
-python cli.py livro.pdf                         # detecta idioma e usa a voz padrão
-python cli.py book.docx -l en -v en-US-GuyNeural --velocidade 10 -o book.mp3
+python cli.py livro.pdf                         # detecta idioma e usa a voz Kokoro padrão
+python cli.py book.docx -l en -v am_michael --velocidade 10 -o book.mp3
 python cli.py --listar-vozes
 ```
 
@@ -64,7 +80,9 @@ python cli.py --listar-vozes
 app.py          servidor local (FastAPI)
 desktop.py      inicia o servidor e abre o navegador (ponto de entrada do executável)
 extractor.py    extração de texto DOC/DOCX/PDF e detecção de idioma
-tts.py          vozes neurais, divisão do texto e geração do MP3
+tts.py          vozes, divisão do texto e geração do MP3
+kokoro_engine.py  vozes Kokoro (IA local): download do modelo, síntese e MP3
+tests/          testes do executável e do app de Mac (rodam no GitHub Actions)
 cli.py          linha de comando
 static/         interface do aplicativo
 web/index.html  versão web independente

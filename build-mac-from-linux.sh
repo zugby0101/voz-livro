@@ -8,7 +8,8 @@ PBS=https://github.com/astral-sh/python-build-standalone/releases/download/20241
 VER=3.12.8+20241206
 APP="$OUT/Narra.app/Contents"; R="$APP/Resources"
 rm -rf "$OUT" && mkdir -p "$APP/MacOS" "$R/app"
-for pair in "aarch64 macosx_11_0_arm64" "x86_64 macosx_10_13_x86_64"; do
+# O motor do Kokoro (onnxruntime) exige macOS 14 no Apple Silicon e 13 no Intel.
+for pair in "aarch64 macosx_14_0_arm64" "x86_64 macosx_13_0_x86_64"; do
   set -- $pair
   mkdir -p "$R/py-$1"
   curl -fsSL "$PBS/cpython-$VER-$1-apple-darwin-install_only_stripped.tar.gz" | tar xz -C "$R/py-$1" --strip-components=1
@@ -19,7 +20,7 @@ for pair in "aarch64 macosx_11_0_arm64" "x86_64 macosx_10_13_x86_64"; do
          "$R/py-$1"/lib/python3.12/site-packages/pip* "$R/py-$1"/lib/{tcl*,tk*,itcl*,thread*} "$R/site-$1/bin"
   find "$R/py-$1" "$R/site-$1" -name __pycache__ -prune -exec rm -rf {} +
 done
-cp app.py desktop.py extractor.py tts.py cli.py "$R/app/" && cp -r static "$R/app/"
+cp app.py desktop.py extractor.py tts.py cli.py kokoro_engine.py "$R/app/" && cp -r static "$R/app/"
 cp mac/Narra "$APP/MacOS/Narra" && chmod +x "$APP/MacOS/Narra"
 cp mac/Info.plist "$APP/Info.plist" && cp mac/Narra.icns "$R/Narra.icns"
 printf 'APPL????' > "$APP/PkgInfo"

@@ -7,6 +7,7 @@ import webbrowser
 
 import uvicorn
 
+import kokoro_engine
 from app import OUTPUT_DIR, app
 
 
@@ -22,12 +23,16 @@ def free_port(start=8765):
 
 
 def main():
-    port = free_port()
+    port = None
+    if "--port" in sys.argv:
+        port = int(sys.argv[sys.argv.index("--port") + 1])
+    port = port or free_port()
     url = f"http://127.0.0.1:{port}"
     print("=" * 52)
     print("  Audiolivro IA")
     print(f"  Abrindo {url}")
     print(f"  Áudios salvos em: {OUTPUT_DIR}")
+    print(f"  Modelo de voz Kokoro em: {kokoro_engine.model_dir()}")
     print("  Feche esta janela para encerrar.")
     print("=" * 52)
     if "--no-browser" not in sys.argv:

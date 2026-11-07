@@ -8,8 +8,10 @@ from typing import Callable
 
 import edge_tts
 
-# Vozes neurais selecionadas por idioma
-VOICES: dict[str, list[dict]] = {
+import kokoro_engine
+
+# Vozes neurais online da Microsoft, por idioma
+EDGE_VOICES: dict[str, list[dict]] = {
     "pt": [
         {"id": "pt-BR-FranciscaNeural", "name": "Francisca", "gender": "F", "locale": "pt-BR"},
         {"id": "pt-BR-AntonioNeural", "name": "Antônio", "gender": "M", "locale": "pt-BR"},
@@ -34,7 +36,18 @@ VOICES: dict[str, list[dict]] = {
         {"id": "es-AR-ElenaNeural", "name": "Elena", "gender": "F", "locale": "es-AR"},
     ],
 }
+# Lista exibida no app: Kokoro (IA local, padrão) primeiro, depois Microsoft (online)
+VOICES: dict[str, list[dict]] = {
+    lang: [{"id": i, "name": n, "gender": g, "locale": loc, "engine": "kokoro"}
+           for i, n, g, loc in kokoro_engine.VOICES[lang]]
+    + [dict(v, engine="edge") for v in EDGE_VOICES[lang]]
+    for lang in ("pt", "en", "es")
+}
 DEFAULT_VOICE = {lang: v[0]["id"] for lang, v in VOICES.items()}
+
+
+def engine_of(voice: str) -> str:
+    return "kokoro" if voice in kokoro_engine.VOICE_IDS else "edge"
 
 MAX_CHUNK = 2500  # caracteres por requisição
 
@@ -104,11 +117,49 @@ async def _synth_chunk(text: str, voice: str, rate: int, volume: int, pitch: int
     raise RuntimeError(f"Falha ao sintetizar trecho: {last}")
 
 
+def _kokoro_to_mp3(text: str, out_path: Path, voice: str, rate: int,
+                   progress: Callable[[int, int], None] | None,
+                   status: Callable[[str], None] | None) -> Path:
+    ok, why = kokoro_engine.availability()
+    if not ok:
+        raise RuntimeError(why + ". Use uma voz Microsoft (online).")
+    if not kokoro_engine.is_installed():
+        def dl(done, total):
+            if status:
+                status(f"Baixando o modelo de voz Kokoro (só na primeira vez): "
+                       f"{done / 1e6:.0f} de {total / 1e6:.0f} MB")
+        dl(0, kokoro_engine.TOTAL_BYTES)
+        kokoro_engine.ensure_model(dl)
+    if status:
+        status("Gerando a narração no seu computador…")
+    chunks = split_text(text, 700)  # blocos menores = progresso mais fino
+    if not chunks:
+        raise ValueError("Texto vazio.")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = out_path.with_suffix(".parcial.mp3")
+    writer = kokoro_engine.Mp3Writer(tmp)
+    try:
+        if progress:
+            progress(0, len(chunks))
+        for i, chunk in enumerate(chunks):
+            writer.write(kokoro_engine.synth(chunk, voice, speed=1 + rate / 100))
+            writer.silence(0.45)  # pausa entre parágrafos
+            if progress:
+                progress(i + 1, len(chunks))
+    finally:
+        writer.close()
+    tmp.replace(out_path)
+    return out_path
+
+
 async def synthesize(text: str, out_path: str | Path, voice: str, rate: int = 0,
                      volume: int = 0, pitch: int = 0, concurrency: int = 4,
                      progress: Callable[[int, int], None] | None = None,
-                     synth=None) -> Path:
+                     synth=None, status: Callable[[str], None] | None = None) -> Path:
     """Gera um MP3 único a partir do texto. `progress(feitos, total)` é chamado a cada bloco."""
+    if synth is None and engine_of(voice) == "kokoro":
+        return await asyncio.to_thread(_kokoro_to_mp3, text, Path(out_path), voice, rate,
+                                       progress, status)
     synth = synth or _synth_chunk
     chunks = split_text(text)
     if not chunks:
