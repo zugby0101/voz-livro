@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     paths: ["ios/**", "web/**", "pwa/**", ".github/workflows/ios.yml"]
+permissions:
+  contents: write
 jobs:
   ipa:
     runs-on: macos-latest
@@ -27,3 +29,12 @@ jobs:
         with:
           name: Narra-iPhone
           path: Narra-iPhone-sem-assinatura.ipa
+      - name: Publicar na página de Releases
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete iphone -y --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          gh release create iphone Narra-iPhone-sem-assinatura.ipa --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Narra para iPhone (.ipa sem assinatura)" \
+            --notes "Instale com Sideloadly ou AltStore usando seu Apple ID. Veja ios/LEIA-ME.md."
